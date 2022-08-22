@@ -78,6 +78,7 @@ class UIEDataset(Dataset):
 
     def map_offset(self, ori_offset, offset_mapping):
         """
+        Adapted from paddleNLP
         map ori offset to token offset
         """
         for index, span in enumerate(offset_mapping):
@@ -86,10 +87,16 @@ class UIEDataset(Dataset):
         return -1
 
     def _convert(self, line):
-        line = line.strip().split("\t")
-        if self.mode in ['train', 'test']:
-            labels = line[1]
-            tgt = [self.label2id[l] for l in labels.split(" ")]
+        json_line = json.loads(line)
+        content = json_line['content'].strip()
+        prompt = json_line['prompt']
+        # Model Input is aslike: [CLS] Prompt [SEP] Content [SEP]
+        # It include three summary tokens.
+        if max_seq_len <= len(prompt) + 3:
+            raise ValueError(
+                "The value of max_seq_len is too small, please set a larger value"
+            )
+        max_content_len = self.seq_length - len(prompt) - 3
 
         text_a = line[0]
         src = self.tokenizer.convert_tokens_to_ids(
